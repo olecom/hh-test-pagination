@@ -1,8 +1,11 @@
 import Head from "next/head";
 import {Inter} from "next/font/google";
-import Table from "react-bootstrap/Table";
-import {Alert, Container} from "react-bootstrap";
+import {Alert, Table, Container, Pagination} from "react-bootstrap";
 import {GetServerSideProps, GetServerSidePropsContext} from "next";
+
+const NEXT_PUBLIC_API_URL = 'http://localhost:3001'
+const PAGES = 10
+const PAGES_QS = '?page='
 
 const inter = Inter({subsets: ["latin"]});
 
@@ -16,31 +19,42 @@ type TUserItem = {
 }
 
 type TGetServerSideProps = {
+  searchParams: { [key: string]: string | string[] | undefined },
   statusCode: number
-  users: TUserItem[]
+  users: TUserItem[] | null
+  meta: {
+    itemsPerPage: number
+    totalItems: number
+    currentPage: number
+    totalPages: number
+  } | null
 }
 
 
 export const getServerSideProps = (async (ctx: GetServerSidePropsContext): Promise<{ props: TGetServerSideProps }> => {
-  try {
-    const res = await fetch("http://localhost:3000/users", {method: 'GET'})
-    if (!res.ok) {
-      return {props: {statusCode: res.status, users: []}}
-    }
+  const ret = { props: { statusCode: 200, users: null, meta: null, searchParams: ctx.query }}
 
-    return {
-      props: {statusCode: 200, users: await res.json()}
+  try {
+    const res = await fetch(`${NEXT_PUBLIC_API_URL}/users?limit=${ctx.query.limit}&page=${ctx.query.page}`)
+    ret.props.statusCode = res.status
+    if (res.ok) {
+      const json = await res.json()
+      ret.props.users = json.data
+      ret.props.meta = json.meta
     }
   } catch (e) {
-    return {props: {statusCode: 500, users: []}}
+    ret.props.statusCode = 500
   }
+  return ret
 }) satisfies GetServerSideProps<TGetServerSideProps>
 
 
-export default function Home({statusCode, users}: TGetServerSideProps) {
+export default function Home({statusCode, users, meta, searchParams}: TGetServerSideProps) {
   if (statusCode !== 200) {
     return <Alert variant={'danger'}>Ошибка {statusCode} при загрузке данных</Alert>
   }
+
+  const pages = meta ? Math.trunc((meta.currentPage - 1)/PAGES) * PAGES : 0
 
   return (
     <>
@@ -68,7 +82,7 @@ export default function Home({statusCode, users}: TGetServerSideProps) {
             </thead>
             <tbody>
             {
-              users.map((user) => (
+              users?.map((user) => (
                 <tr key={user.id}>
                   <td>{user.id}</td>
                   <td>{user.firstname}</td>
@@ -81,11 +95,26 @@ export default function Home({statusCode, users}: TGetServerSideProps) {
             }
             </tbody>
           </Table>
+          <Pagination>
+            <Pagination.First href={PAGES_QS + 1}/>
+            <Pagination.Prev href={PAGES_QS + (pages > 0 ? pages : 1)}/>
+            {meta && Array(PAGES).fill(pages).map((start, i) => {
+              const pidx = start + i + 1
 
-          {/*TODO add pagination*/}
-
+              return (pidx <= meta.totalPages) && <Pagination.Item
+                key={pidx}
+                active={meta.currentPage === pidx}
+                href={PAGES_QS + pidx}
+                >
+                  {pidx}
+                </Pagination.Item>
+              })
+            }
+            <Pagination.Next href={PAGES_QS + (pages + PAGES + 1)} disabled={((pages + PAGES + 1) > (meta?.totalPages || Infinity))}/>
+            <Pagination.Last href={PAGES_QS + meta?.totalPages}/>
+          </Pagination>
         </Container>
       </main>
     </>
-  );
+  )
 }
