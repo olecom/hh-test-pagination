@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {UsersModule} from "./users/users.module";
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 const pg = new URL(process.env.APP_PG_URL);
 
