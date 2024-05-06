@@ -1,0 +1,18 @@
+version: "3.6"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hh-test-db
+    restart: always
+    environment:
+      POSTGRES_DB: test_pagination
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - 5432:5432
+    networks:
+      - hh-network
+
+networks:
+  hh-network:

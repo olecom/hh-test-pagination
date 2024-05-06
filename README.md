@@ -12,3 +12,10 @@
 (например: `postgresql://user:password@localhost:5432/test_pagination?sslmode=disable`). 
 
 Для загрузки данных в БД используйте файл `test_pagination_localhost-dump.sql` (например: `psql -h localhost -U user -d test_pagination -f test_pagination_localhost-dump.sql`).
+
+Или:
+```sh
+docker-compose.exe -f srv/docker-compose.dev.yml up &
+docker cp test_pagination_localhost-dump.sql hh-test-db:/
+docker exec -it hh-test-db psql -h localhost -U user -d test_pagination -f test_pagination_localhost-dump.sql
+```
